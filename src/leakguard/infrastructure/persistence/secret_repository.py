@@ -7,7 +7,7 @@ from uuid import UUID
 
 from leakguard.domain.inspection.snapshot import SecretSnapshot
 from leakguard.domain.secret.repository import SecretRepository
-from leakguard.domain.secret.secret import LabeledExample, Secret, Split
+from leakguard.domain.secret.secret import LabeledExample, Secret
 from leakguard.infrastructure.persistence.base_repository import BaseRepositoryImpl
 
 
@@ -26,5 +26,5 @@ class SecretRepositoryImpl(BaseRepositoryImpl[Secret], SecretRepository):
     def add_examples(self, secret_id: UUID, examples: Sequence[LabeledExample]) -> None:
         raise NotImplementedError
 
-    def list_examples(self, secret_id: UUID, split: Split) -> list[LabeledExample]:
+    def list_examples(self, secret_id: UUID) -> list[LabeledExample]:
         raise NotImplementedError

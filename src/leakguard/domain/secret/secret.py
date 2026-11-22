@@ -25,13 +25,6 @@ class ExampleSource(Enum):
     VERIFIED = "VERIFIED"    # a verification case the admin labelled (FR-17, FR-18)
 
 
-class Split(Enum):
-    """LabeledExample.split. EVAL examples are never indexed or calibrated on (NFR-14)."""
-
-    TRAIN = "TRAIN"
-    EVAL = "EVAL"
-
-
 @dataclass
 class ExposurePolicy:
     """What counts as exposing the secret and what may be said about it (FR-14).
@@ -56,13 +49,10 @@ class LabeledExample:
     """One labelled prompt of a secret (FR-13, FR-16, FR-18).
 
     Roles:
-      - TRAIN + EXPOSURE: indexed next to the description and prohibited details;
-      - TRAIN + NON_EXPOSURE: used only to calibrate thresholds;
-      - EVAL: kept apart to measure precision and recall (NFR-14).
+      - EXPOSURE: indexed next to the description and prohibited details;
+      - NON_EXPOSURE: used only to calibrate thresholds.
 
-    Invariants:
-      - IndexedOnlyTrainExposure: in the VectorIndex implies split = TRAIN and label = EXPOSURE;
-      - VerifiedIsTrain: source = VERIFIED implies split = TRAIN.
+    Invariant IndexedOnlyExposure: in the VectorIndex implies label = EXPOSURE.
     """
 
     id: UUID
@@ -70,7 +60,6 @@ class LabeledExample:
     text: str  # encrypted at rest
     label: Label
     source: ExampleSource
-    split: Split
 
 
 @dataclass

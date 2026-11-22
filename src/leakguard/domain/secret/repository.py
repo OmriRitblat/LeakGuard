@@ -8,7 +8,7 @@ from uuid import UUID
 
 from leakguard.domain.common.repository import Repository
 from leakguard.domain.inspection.snapshot import SecretSnapshot
-from leakguard.domain.secret.secret import LabeledExample, Secret, Split
+from leakguard.domain.secret.secret import LabeledExample, Secret
 
 
 class SecretRepository(Repository[Secret]):
@@ -39,9 +39,9 @@ class SecretRepository(Repository[Secret]):
     def add_examples(self, secret_id: UUID, examples: Sequence[LabeledExample]) -> None:
         """Store new examples of a secret.
 
-        Post: TRAIN + EVAL count of the secret grows by len(examples).
+        Post: the secret's example count grows by len(examples).
         """
 
     @abstractmethod
-    def list_examples(self, secret_id: UUID, split: Split) -> list[LabeledExample]:
-        """Return the secret's examples of one split (loaded on demand)."""
+    def list_examples(self, secret_id: UUID) -> list[LabeledExample]:
+        """Return the secret's examples (loaded on demand)."""

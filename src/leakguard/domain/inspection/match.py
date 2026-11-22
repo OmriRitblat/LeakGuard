@@ -12,7 +12,7 @@ class MatchKind(Enum):
 
     DESCRIPTION = "DESCRIPTION"      # the secret's description
     POLICY_DETAIL = "POLICY_DETAIL"  # one prohibited detail of its ExposurePolicy
-    EXAMPLE = "EXAMPLE"              # one TRAIN EXPOSURE LabeledExample
+    EXAMPLE = "EXAMPLE"              # one EXPOSURE LabeledExample
 
 
 @dataclass(frozen=True)

@@ -75,7 +75,7 @@ class SecretService:
         Pre  Admin: caller.is_admin.
         Pre  Pending: the case exists and is PENDING.
         Post Verified: the case is VERIFIED.
-        Post Learned: one new example with source = VERIFIED and split = TRAIN is stored,
+        Post Learned: one new example with source = VERIFIED is stored,
              and indexed if its label is EXPOSURE.
         Post NewSnapshot: the secret is re-calibrated and a new snapshot is published.
         If saving fails, the case stays PENDING and no success is reported (UC-07 A2).
@@ -87,17 +87,17 @@ class SecretService:
 
         Pre  the secret exists.
         Post the index holds one vector for the description (DESCRIPTION), one per
-             prohibited detail (POLICY_DETAIL) and one per TRAIN EXPOSURE example (EXAMPLE).
+             prohibited detail (POLICY_DETAIL) and one per EXPOSURE example (EXAMPLE).
         """
         raise NotImplementedError
 
     def _calibrate_thresholds(self, secret_id: UUID) -> None:
-        """Pick pass / block / ce thresholds from the TRAIN examples.
+        """Pick pass / block / ce thresholds from the secret's examples.
 
-        Pre  TRAIN examples of both labels exist.
+        Pre  examples of both labels exist.
         Post the Secret.Thresholds invariant holds.
         Hint: reach the recall target first (NFR-11), then the lowest false-positive
-        rate (NFR-13); report the final figures on EVAL examples only.
+        rate (NFR-13).
         """
         raise NotImplementedError
 

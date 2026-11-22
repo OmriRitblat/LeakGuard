@@ -15,7 +15,7 @@ class VectorIndex(ABC):
     """Stores the reference vectors of the secrets and finds those close to a prompt.
 
     Each row is one reference text: a secret's description (ref_id = secret_id),
-    one prohibited detail of its ExposurePolicy, or one TRAIN EXPOSURE example
+    one prohibited detail of its ExposurePolicy, or one EXPOSURE example
     (ref_id = example id).
     """
 

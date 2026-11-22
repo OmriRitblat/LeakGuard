@@ -12,12 +12,19 @@ class EmbeddingMatchStage(InspectionStage):
     """Embeds current_text and searches the vector index (FR-07).
 
     The index holds each secret's description, each prohibited detail of its
-    exposure policy, and its TRAIN exposure examples.
+    exposure policy, and its exposure examples.
+
+    max_matches_per_candidate (not in diagram v11; from config): only the best N
+    matches are kept per candidate (ADD: for example 5), so the Cross-Encoder's
+    cost stays bounded. None keeps every match (unlimited).
     """
 
-    def __init__(self, bi_encoder: BiEncoder, index: VectorIndex) -> None:
+    def __init__(
+        self, bi_encoder: BiEncoder, index: VectorIndex, max_matches_per_candidate: int | None
+    ) -> None:
         self._bi_encoder = bi_encoder
         self._index = index
+        self._max_matches_per_candidate = max_matches_per_candidate
 
     def process(self, context: InspectionContext) -> StageOutcome:
         """Search with min_sim = the lowest pass_threshold in the snapshot and group the Matches by secret.

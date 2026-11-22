@@ -11,8 +11,9 @@ from leakguard.domain.ports.vector_index import Vector
 class SentenceTransformerBiEncoder(BiEncoder):
     """BiEncoder on the sentence-transformers library. Loaded once at start-up."""
 
-    def __init__(self, model_name: str) -> None:
+    def __init__(self, model_name: str, device: str) -> None:
         self._model_name = model_name
+        self._device = device
 
     def embed(self, texts: Sequence[str]) -> list[Vector]:
         raise NotImplementedError

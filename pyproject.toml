@@ -16,6 +16,7 @@ dependencies = [
     "pyjwt",                   # JwtTokenIssuer
     "cryptography",            # CryptoService, AES-256-GCM (NFR-01)
     "httpx",                   # HttpInspectionClient (Alpha)
+    "pydantic-settings[yaml]>=2.4",  # leakguard.config.Settings + config/leakguard.yaml
 ]
 
 [project.optional-dependencies]

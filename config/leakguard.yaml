@@ -1,0 +1,44 @@
+# LeakGuard configuration (read by leakguard.config.settings.load_settings).
+#
+# Any value can be overridden per machine with an environment variable:
+#   LEAKGUARD_<SECTION>__<KEY>, e.g.  LEAKGUARD_MODELS__BI_ENCODER__DEVICE=cuda
+# Use another file with LEAKGUARD_CONFIG_FILE=path/to/file.yaml.
+#
+# Values marked "placeholder" still need a team decision.
+
+inspection:
+  # Deadline of InspectionService per request. Must be lower than
+  # failure_policy.timeout_ms, so the service answers before the hook gives up.
+  time_limit_ms: 6000           # placeholder: align with the latency NFR
+  # DecisionPolicy: decision for a candidate still UNCERTAIN after the last stage.
+  uncertain_decision: BLOCK     # ALLOW | REDACT | BLOCK
+  # EmbeddingMatchStage: matches kept per candidate. Each kept match costs one
+  # Cross-Encoder run; a number (e.g. 5, ADD 5.2.2) bounds that cost.
+  max_matches_per_candidate: null   # null = unlimited (keep every match)
+
+failure_policy:
+  # What the hook does when no valid result arrives (FR-12).
+  mode: FAIL_CLOSED             # FAIL_CLOSED (block) | FAIL_OPEN (allow)
+  timeout_ms: 7000              # placeholder: align with the latency NFR
+  max_attempts: 2               # fixed: the first attempt + one retry (FR-12)
+
+# One entry per model: its Hugging Face id and the device it runs on.
+# device: cpu | cuda | cuda:<n> (a specific GPU, e.g. cuda:1)
+models:
+  bi_encoder:                   # EmbeddingMatchStage + indexing
+    name: sentence-transformers/all-MiniLM-L6-v2   # placeholder
+    device: cpu
+  cross_encoder:                # CrossEncoderStage
+    name: cross-encoder/ms-marco-MiniLM-L-6-v2     # placeholder
+    device: cpu
+  local_llm: null               # null = disabled (example generation, judge stage); otherwise:
+  #   name: <hugging-face-id>
+  #   device: cpu
+
+vector_index:
+  # PgVectorIndex: LIMIT on each search, as a safety cap.
+  max_results: 100              # placeholder
+
+statistics:
+  # Exposure attempts per user per day above which the user is flagged (FR-31).
+  attempt_limit: 10             # placeholder

@@ -9,12 +9,9 @@ description = "LeakGuard: semantic DLP guardrail for LiteLLM Proxy (BGU SE final
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "litellm",                 # pre-call hook base class (CustomGuardrail)
     "sqlalchemy>=2.0",         # BaseRepositoryImpl[T]
     "psycopg[binary]",         # PostgreSQL driver
     "pgvector",                # PgVectorIndex (PC-05)
-    "sentence-transformers",   # SentenceTransformerBiEncoder, HfCrossEncoderModel
-    "transformers",            # HfLocalLlm
     "argon2-cffi",             # Argon2PasswordHasher (NFR-06)
     "pyjwt",                   # JwtTokenIssuer
     "cryptography",            # CryptoService, AES-256-GCM (NFR-01)
@@ -22,6 +19,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+litellm = ["litellm"]          # LeakGuardGuardrail (CustomGuardrail base class)
+ml = [                         # heavy: pulls in PyTorch
+    "sentence-transformers",   # SentenceTransformerBiEncoder, HfCrossEncoderModel
+    "transformers",            # HfLocalLlm
+]
+all = ["leakguard[litellm,ml]"]
 dev = ["pytest"]
 
 [tool.setuptools.packages.find]

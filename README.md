@@ -35,7 +35,8 @@ src/leakguard/
     security/                  CryptoService, Argon2PasswordHasher, JwtTokenIssuer
     vector/                    PgVectorIndex
     models/                    SentenceTransformerBiEncoder, HfCrossEncoderModel, HfLocalLlm
-tests/test_structure.py        every module imports; every diagram realization holds
+tests/                         pytest tests (test_ci.py is a placeholder)
+.github/workflows/ci.yml       GitHub Actions: runs pytest on Python 3.11 on every push to main and every PR
 ```
 
 ## How the diagram maps to code
@@ -79,6 +80,8 @@ FastAPI routers (the API layer that checks `caller`), SQLAlchemy ORM models (see
 ## Development
 
 ```bash
-pip install -e ".[dev]"
+pip install -e ".[dev]"            # core + pytest (what CI installs)
+pip install -e ".[dev,litellm]"    # + LiteLLM, for the guardrail hook
+pip install -e ".[dev,all]"        # + sentence-transformers/transformers (pulls in PyTorch)
 pytest
 ```

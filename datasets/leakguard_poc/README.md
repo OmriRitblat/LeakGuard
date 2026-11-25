@@ -33,10 +33,10 @@ The `tests/fixtures/` directory contains **EVAL fixtures**: standalone prompts a
 | File group | Files | Cases | Purpose |
 | --- | ---: | ---: | --- |
 | Single-secret TRAIN | 3 | 84 | Secret definitions, policies, labeled examples (42 `EXPOSURE`, 42 `NON_EXPOSURE`) |
-| Single-secret EVAL | 3 | 156 | 72 `EXPOSURE` and 84 `NON_EXPOSURE` cases |
-| Multi-secret EVAL | 1 | 24 | 18 `BLOCK` cases and 6 `ALLOW` cases |
+| Single-secret EVAL | 3 | 163 | 76 `EXPOSURE` and 87 `NON_EXPOSURE` cases |
+| Multi-secret EVAL | 1 | 27 | 19 `BLOCK` cases and 8 `ALLOW` cases |
 | PII EVAL | 1 | 18 | 8 `REDACT`, 4 `BLOCK`, and 6 `ALLOW` cases |
-| **Total** | **8 JSON files** | **282** | **84 TRAIN + 198 EVAL** |
+| **Total** | **8 JSON files** | **292** | **84 TRAIN + 208 EVAL** |
 
 ## Secrets
 
@@ -127,7 +127,7 @@ Files: `ss001_eval.json`, `ss002_eval.json`, `ss003_eval.json`.
 - `cases[].expected_label`: `EXPOSURE` or `NON_EXPOSURE`, **relative to the named secret**.
 - `cases[].expected_decision`: final expected pipeline decision, `BLOCK` or `ALLOW` in these single-secret files.
 
-`expected_label` is an annotation for evaluating secret detection; `expected_decision` is the observable end-to-end result. They represent different levels of evaluation.
+`expected_label` is an annotation for evaluating secret detection; `expected_decision` is the observable end-to-end result. They represent different levels of evaluation. The single-secret EVAL files also include longer `LC-*` cases for checking whether a disclosure can be detected within document-length text.
 
 ### 2. Multi-secret evaluation
 
@@ -150,6 +150,8 @@ File: `multi_secret_eval.json`.
 - `expected_decision`: final expected pipeline decision (`BLOCK` or `ALLOW`).
 
 **Early stopping:** A `BLOCK` decision may stop inspection on the first detected secret. The system is **not** required to return every entry in `expected_secret_codes` for the case to pass the final-decision test. The array is an evaluation annotation, not a requirement to enumerate all matches.
+
+The multi-secret file also includes longer `LC-*` cases whose text discusses multiple protected topics or exposes multiple secrets.
 
 ### 3. PII and combined PII/secret evaluation
 
@@ -196,6 +198,14 @@ Embedding these texts and calibrating thresholds **does not mean fine-tuning** t
 5. Aggregate results by file and by expected outcome to identify false blocks, missed disclosures, and missed redactions.
 
 **Data leakage rule:** Do not load EVAL prompts into the database's reference corpus or vector index, and do not use them to calibrate thresholds if the same EVAL set is to serve as an independent final benchmark. If evaluation cases are used repeatedly to tune the system, the reported results should be considered development-set results rather than unbiased holdout results.
+
+### Long-context evaluation cases
+
+The existing single-secret and multi-secret EVAL files include **10 long-context cases** identified by the `LC-` prefix (5 `BLOCK`, 5 `ALLOW`). They range from roughly 230 to 486 words and cover disclosures at different positions in longer prompts, unrelated surrounding content, and multiple protected topics. They are **not attached-file fixtures**: each `text` value is an ordinary textual prompt.
+
+To compare long-input processing approaches, run the same case as a complete text and, where supported by the implementation, with different chunk sizes and overlapping chunks. The expected decision applies to the **whole prompt**, not each chunk. The tests do not prescribe a particular chunking algorithm, model, or token limit.
+
+These cases belong to EVAL in the current dataset layout. If any EVAL case is used to choose models, configure chunking, or tune thresholds, that case has been used for development and should not later be reported as an independent held-out final benchmark. Use an untouched evaluation set when final unbiased metrics are needed.
 
 ### Reading fixtures programmatically
 

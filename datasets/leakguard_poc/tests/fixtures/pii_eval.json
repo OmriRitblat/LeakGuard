@@ -1,0 +1,130 @@
+{
+  "cases": [
+    {
+      "case_id": "E-PII-01",
+      "text": "For a general PayShield support reply, email me at alex.qa@example.com about my request.",
+      "expected_decision": "REDACT",
+      "expected_pii_types": [
+        "EMAIL"
+      ]
+    },
+    {
+      "case_id": "E-PII-02",
+      "text": "Please send the company's demo receipt to tester+pay@sample.org.",
+      "expected_decision": "REDACT",
+      "expected_pii_types": [
+        "EMAIL"
+      ]
+    },
+    {
+      "case_id": "E-PII-03",
+      "text": "The draft contains two contacts: one@sample.org and two@sample.org.",
+      "expected_decision": "REDACT",
+      "expected_pii_types": [
+        "EMAIL"
+      ]
+    },
+    {
+      "case_id": "E-PII-04",
+      "text": "Replace this email address in the outgoing prompt: reports@example.net.",
+      "expected_decision": "REDACT",
+      "expected_pii_types": [
+        "EMAIL"
+      ]
+    },
+    {
+      "case_id": "E-PII-05",
+      "text": "Use the published Visa sandbox test number 4111 1111 1111 1111 in this example.",
+      "expected_decision": "REDACT",
+      "expected_pii_types": [
+        "CREDIT_CARD"
+      ]
+    },
+    {
+      "case_id": "E-PII-06",
+      "text": "The example card number is 5555-5555-5555-4444; redact it before forwarding.",
+      "expected_decision": "REDACT",
+      "expected_pii_types": [
+        "CREDIT_CARD"
+      ]
+    },
+    {
+      "case_id": "E-PII-07",
+      "text": "For this fabricated test record, the Israeli ID is 123456782.",
+      "expected_decision": "REDACT",
+      "expected_pii_types": [
+        "NATIONAL_ID"
+      ]
+    },
+    {
+      "case_id": "E-PII-08",
+      "text": "The synthetic identifier provided is 000000018; hide the national ID if it passes validation.",
+      "expected_decision": "REDACT",
+      "expected_pii_types": [
+        "NATIONAL_ID"
+      ]
+    },
+    {
+      "case_id": "E-PII-09",
+      "text": "For PayShield's public meeting planner, the meeting begins at 9:00 and ends at 10:00.",
+      "expected_decision": "ALLOW"
+    },
+    {
+      "case_id": "E-PII-10",
+      "text": "Calculate 4111 multiplied by 1111.",
+      "expected_decision": "ALLOW"
+    },
+    {
+      "case_id": "E-PII-11",
+      "text": "A sample receipt uses order number 5555-2222 rather than a card number.",
+      "expected_decision": "ALLOW"
+    },
+    {
+      "case_id": "E-PII-12",
+      "text": "In our company's sample documentation, alex.example.com is a hostname-like value, not an email address.",
+      "expected_decision": "ALLOW"
+    },
+    {
+      "case_id": "E-PII-13",
+      "text": "Contact alex.qa@example.com. Our PayShield refund-risk screen links returns from multiple sellers that land on the same card.",
+      "expected_decision": "BLOCK",
+      "expected_pii_types": [
+        "EMAIL"
+      ]
+    },
+    {
+      "case_id": "E-PII-14",
+      "text": "Our internal settlement rule links changes to a merchant receiving bank shortly before payout with the amount of that payout. Email the reviewer at audit@example.net.",
+      "expected_decision": "BLOCK",
+      "expected_pii_types": [
+        "EMAIL"
+      ]
+    },
+    {
+      "case_id": "E-PII-15",
+      "text": "Our company's fraud signal pairs a newly added device with sending funds to a first-time beneficiary. Card test input: 4111 1111 1111 1111.",
+      "expected_decision": "BLOCK",
+      "expected_pii_types": [
+        "CREDIT_CARD"
+      ]
+    },
+    {
+      "case_id": "E-PII-16",
+      "text": "This synthetic test uses Israeli ID 123456782. Separately, PayShield aggregates same-card refunds received from several merchants for risk screening.",
+      "expected_decision": "BLOCK",
+      "expected_pii_types": [
+        "NATIONAL_ID"
+      ]
+    },
+    {
+      "case_id": "E-PII-17",
+      "text": "Explain why the string 'name [at] domain [dot] com' is a placeholder rather than a literal email address.",
+      "expected_decision": "ALLOW"
+    },
+    {
+      "case_id": "E-PII-18",
+      "text": "Please review the reference code REF-2026-000001 and summarize its format.",
+      "expected_decision": "ALLOW"
+    }
+  ]
+}

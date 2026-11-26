@@ -100,8 +100,7 @@ settings.failure_policy.timeout_ms   # 7000
 | `vector_index` | `max_results` | PgVectorIndex |
 | `statistics` | `attempt_limit` | StatisticsService |
 
-No secrets are in this file. The database URL, encryption key, JWT key and service
-token will come from environment variables when they are added.
+No secrets are stored in the YAML configuration. Database credentials and the encryption key are configured through environment variables. JWT and service-token configuration will be added in later development stages.
 
 ### Two timers
 
@@ -140,10 +139,9 @@ constructors.
 
 ## Not yet in the skeleton
 
-FastAPI routers (the API layer that checks `caller`),
-encryption-key/JWT/service-token configuration and management,
-the wiring that builds application services from `Settings`,
-and the management UI.
+FastAPI routers, JWT/service-token configuration and management, application startup wiring, and the management UI are not yet implemented.
+
+SQLAlchemy ORM models, local database infrastructure, and AES-256-GCM encryption are implemented. Repository operations, fixture loading, and integration of CryptoService into application startup are still pending.
 
 SQLAlchemy ORM table definitions and local database setup are now
 available; repository operations and encryption are not yet implemented.
@@ -157,9 +155,57 @@ Each developer runs a separate local database, not a shared one.
 
 The database includes the 10 tables defined in the approved ERD.
 
-**Current limitations:** CryptoService, repository operations and
-fixture loading are not yet implemented. Do not store real
-organizational secrets.
+**Current limitations:** The database schema and encryption infrastructure are implemented. Repository integration and fixture loading are still pending. See the Local Encryption Setup section below for encryption key configuration.
+
+## Local Encryption Setup (Development)
+
+LeakGuard uses AES-256-GCM to encrypt sensitive organizational information before storing it in PostgreSQL.
+
+Each developer uses a separate local encryption key, stored in their `.env` file. The key is generated once during local setup and reused across application restarts.
+
+### First-Time Setup
+
+First, complete the local database setup described in [Database Setup](docs/database.md), including creating `.env` and installing the Python dependencies.
+
+Then, from the project root, generate the encryption key:
+
+**Windows (PowerShell):**
+
+```powershell
+.\.venv\Scripts\python.exe scripts/generate_encryption_key.py
+```
+
+**Linux / macOS:**
+
+```bash
+.venv/bin/python scripts/generate_encryption_key.py
+```
+
+The script automatically:
+
+- Generates a cryptographically secure 32-byte AES-256 key.
+- Encodes the key in Base64 and stores it as `LEAKGUARD_ENCRYPTION_KEY` in `.env`.
+- Preserves existing environment variables, including PostgreSQL settings.
+- Does not overwrite an existing non-empty encryption key.
+- Does not print the encryption key.
+
+The script only needs to be run during initial setup. Re-running it is safe because an existing key will not be replaced.
+
+### During Normal Operation
+
+No additional key-generation step is required.
+
+The `create_crypto_service_from_env()` function in `src/leakguard/config/encryption.py` loads the existing key and creates a `CryptoService` instance.
+
+Integration with the application startup and persistence repositories will be completed in a later development stage.
+
+### Security Notes
+
+- Never commit `.env` or an actual encryption key to Git.
+- Never replace a lost key if encrypted data already exists. Data encrypted with the original key cannot be decrypted using a new key.
+- The key-generation script is intended for local development environments.
+- Shared and production environments will require managed encryption keys.
+- Do not store real organizational secrets during the POC.
 
 ## Development
 

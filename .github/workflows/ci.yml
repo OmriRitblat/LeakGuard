@@ -26,3 +26,52 @@ jobs:
 
       - name: Run tests
         run: pytest -v
+
+  database:
+    name: PostgreSQL schema integration (Python 3.11)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.7-pg16-trixie
+
+        env:
+          POSTGRES_DB: leakguard
+          POSTGRES_USER: leakguard
+          POSTGRES_PASSWORD: ci_only_local_test_password
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd "pg_isready -U leakguard -d leakguard"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+
+    env:
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: leakguard
+      POSTGRES_USER: leakguard
+      POSTGRES_PASSWORD: ci_only_local_test_password
+      LEAKGUARD_RUN_DB_TESTS: "1"
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install the project and test tools
+        run: python -m pip install -e ".[dev]"
+
+      - name: Initialize database schema
+        run: python -m leakguard.infrastructure.persistence.init_db
+
+      - name: Test database schema
+        run: python -m pytest tests/integration/test_database_schema.py -v

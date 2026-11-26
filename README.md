@@ -5,6 +5,10 @@ Semantic DLP guardrail for LiteLLM Proxy (BGU Software Engineering final project
 **Status: code skeleton.** Packages, classes, interfaces, fields and method signatures
 from `LeakGuard_class_diagram_v11` and the ADD (5.2 Class Description). Method bodies
 raise `NotImplementedError`. Each docstring carries the ADD's pre/post-conditions.
+The initial packages, class signatures and interfaces follow the class
+diagram and ADD. The PostgreSQL schema and database integration tests
+have been added; most application, repository and adapter method bodies
+are still placeholders.
 
 ## Layout
 
@@ -136,9 +140,26 @@ constructors.
 
 ## Not yet in the skeleton
 
-FastAPI routers (the API layer that checks `caller`), SQLAlchemy ORM models (see
-`LeakGuard_ERD.drawio`), secrets configuration (database URL, encryption key, JWT key,
-service token), the wiring that builds the objects from `Settings`, and the management UI.
+FastAPI routers (the API layer that checks `caller`),
+encryption-key/JWT/service-token configuration and management,
+the wiring that builds application services from `Settings`,
+and the management UI.
+
+SQLAlchemy ORM table definitions and local database setup are now
+available; repository operations and encryption are not yet implemented.
+
+## Local PostgreSQL database (development)
+
+LeakGuard's local database runs in Docker Compose (PostgreSQL 16 with pgvector).
+Each developer runs a separate local database, not a shared one.
+
+**Getting started:** [Database setup, initialization, testing and troubleshooting](docs/database.md).
+
+The database includes the 10 tables defined in the approved ERD.
+
+**Current limitations:** CryptoService, repository operations and
+fixture loading are not yet implemented. Do not store real
+organizational secrets.
 
 ## Development
 

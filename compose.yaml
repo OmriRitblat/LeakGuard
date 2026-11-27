@@ -12,12 +12,33 @@ services:
 
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
-
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  db_test:
+    image: pgvector/pgvector:0.8.7-pg16-trixie
+    profiles: ["test"]
+
+    environment:
+      POSTGRES_DB: leakguard_test
+      POSTGRES_USER: leakguard_test
+      POSTGRES_PASSWORD: ${POSTGRES_TEST_PASSWORD:-local_test_only_password}
+
+    ports:
+      - "127.0.0.1:${POSTGRES_TEST_PORT:-55433}:5432"
+
+    tmpfs:
+      - /var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U leakguard_test -d leakguard_test"]
       interval: 5s
       timeout: 5s
       retries: 10

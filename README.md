@@ -141,10 +141,15 @@ constructors.
 
 FastAPI routers, JWT/service-token configuration and management, application startup wiring, and the management UI are not yet implemented.
 
-SQLAlchemy ORM models, local database infrastructure, and AES-256-GCM encryption are implemented. Repository operations, fixture loading, and integration of CryptoService into application startup are still pending.
 
-SQLAlchemy ORM table definitions and local database setup are now
-available; repository operations and encryption are not yet implemented.
+SQLAlchemy ORM models, PostgreSQL infrastructure, AES-256-GCM encryption, and shared pytest fixtures are implemented. Repository operations, full TRAIN dataset seeding, and application startup integration are still pending.
+
+
+## POC Dataset
+
+The synthetic PayShield dataset contains TRAIN data for secret definitions, exposure policies, and labeled examples, alongside separate EVAL prompts with expected outcomes.
+
+For dataset structure, labeling conventions, and evaluation cases, see the [POC Dataset README](datasets/leakguard_poc/README.md).
 
 ## Local PostgreSQL database (development)
 
@@ -155,7 +160,9 @@ Each developer runs a separate local database, not a shared one.
 
 The database includes the 10 tables defined in the approved ERD.
 
-**Current limitations:** The database schema and encryption infrastructure are implemented. Repository integration and fixture loading are still pending. See the Local Encryption Setup section below for encryption key configuration.
+
+**Current limitations:** The database schema, encryption infrastructure, and shared testing fixtures are implemented. Full TRAIN dataset seeding, repository integration, and application startup wiring are still pending.
+
 
 ## Local Encryption Setup (Development)
 
@@ -206,6 +213,15 @@ Integration with the application startup and persistence repositories will be co
 - The key-generation script is intended for local development environments.
 - Shared and production environments will require managed encryption keys.
 - Do not store real organizational secrets during the POC.
+
+
+## Testing
+
+LeakGuard provides shared pytest fixtures for isolated PostgreSQL testing, encryption, and synthetic POC dataset access.
+
+For setup instructions, local test execution, fixture usage, and CI integration, see the [Testing Guide](docs/testing.md).
+
+
 
 ## Development
 

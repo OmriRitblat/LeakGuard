@@ -49,6 +49,23 @@ jobs:
           --health-timeout 5s
           --health-retries 15
 
+      postgres_test:
+        image: pgvector/pgvector:0.8.7-pg16-trixie
+
+        env:
+          POSTGRES_DB: leakguard_test
+          POSTGRES_USER: leakguard_test
+          POSTGRES_PASSWORD: ci_only_test_password
+
+        ports:
+          - 55433:5432
+
+        options: >-
+          --health-cmd "pg_isready -U leakguard_test -d leakguard_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+
     env:
       POSTGRES_HOST: 127.0.0.1
       POSTGRES_PORT: 5432
@@ -56,6 +73,9 @@ jobs:
       POSTGRES_USER: leakguard
       POSTGRES_PASSWORD: ci_only_local_test_password
       LEAKGUARD_RUN_DB_TESTS: "1"
+      POSTGRES_TEST_PORT: "55433"
+      POSTGRES_TEST_PASSWORD: ci_only_test_password
+      LEAKGUARD_RUN_TEST_DB: "1"
 
     steps:
       - name: Check out the repository
@@ -75,3 +95,7 @@ jobs:
 
       - name: Test database schema
         run: python -m pytest tests/integration/test_database_schema.py -v
+
+      - name: Test isolated database fixtures
+        run: |
+          python -m pytest tests/integration/test_test_database.py tests/integration/test_fixture_integration.py -v

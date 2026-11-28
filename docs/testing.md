@@ -148,13 +148,39 @@ The `.github/workflows/ci.yml` workflow runs on pull requests and pushes to `mai
 
 The existing schema tests use a **different flag**, `LEAKGUARD_RUN_DB_TESTS=1`, and connect through the normal database configuration (`create_db_engine()`). They should not be confused with tests using the isolated `db_session` fixture. The two test paths must use the appropriate database configuration.
 
-## 7. Current scope and limitations
+## 7. LiteLLM proxy and mock LLM tests
+
+These tests need the `litellm` extra (`pip install -e ".[dev,litellm]"`, as in CI) and are
+skipped without it. They start a real LiteLLM proxy as a subprocess and send HTTP requests to
+it, so they cover client -> LiteLLM -> hook -> mock LLM:
+
+- `tests/integration/test_litellm_proxy.py` uses `config/litellm.yaml` with the real LeakGuard hook.
+- `tests/integration/test_mock_llm_flow.py` uses `tests/utils/litellm_test.yaml`, where test
+  doubles of the hook (`tests/utils/litellm_doubles.py`: `spy`, `reject`, `replace`) are chosen
+  per request with `"guardrails": ["<name>"]`.
+
+There is no separate LeakGuard configuration for tests: they read `config/leakguard.yaml` and
+override single values through environment variables. `tests/utils/litellm_proxy.py` starts the
+proxy with `start_proxy(config, work_dir)` on a free port, a random master key and mock LLM
+recording on (`LEAKGUARD_MOCK_LLM__RECORD_FILE` points to a temporary file). The hook doubles
+and the mock LLM write to the same record file, so a test can check what reached the hook, what
+reached the LLM and in which order:
+
+```python
+from leakguard.infrastructure.litellm.mock_llm_provider import RECEIVED_EVENT, read_events
+
+def test_example(proxy, record):          # record = proxy.clear_record(), emptied per test
+    ...                                   # send a request to proxy.base_url with proxy.auth
+    assert [e["event"] for e in read_events(record)] == ["hook_approved", RECEIVED_EVENT]
+```
+
+## 8. Current scope and limitations
 
 This infrastructure supports repeatable dataset validation, isolated database testing, and test helpers shared across the team. It does **not** yet provide:
 
 - Full TRAIN-to-PostgreSQL seeding for a complete POC reference corpus.
 - Embedding creation, vector indexing, or threshold calibration.
 - End-to-end EVAL execution against the detection pipeline.
-- LiteLLM integration or application-startup wiring for the production `CryptoService`.
+- Application-startup wiring for the production `CryptoService`.
 
 These integrations will be implemented separately as the corresponding application components become available.

@@ -6,12 +6,17 @@
 # Every request must send the master key: Authorization: Bearer <LITELLM_MASTER_KEY>
 
 model_list:
-  # Mock model: LiteLLM answers with mock_response and never calls a real provider,
-  # so no provider API key is needed (POC test provider).
+  # Mock model: the LeakGuard mock LLM (MockLLMProvider) answers with the messages it received
+  # after the hook, and never calls a real provider, so no provider API key is needed
+  # (POC test provider). Recording: mock_llm.record_file in config/leakguard.yaml.
   - model_name: leakguard-mock
     litellm_params:
-      model: openai/leakguard-mock
-      mock_response: "Mock answer from the LeakGuard test model."
+      model: leakguard-mock/echo      # <provider>/<model>; the provider is registered below
+
+litellm_settings:
+  custom_provider_map:
+    - provider: leakguard-mock
+      custom_handler: leakguard.infrastructure.litellm.mock_llm_provider.mock_llm_provider
 
 guardrails:
   # The LeakGuard pre-call hook, run on every request (FR-01).

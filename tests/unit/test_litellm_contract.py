@@ -21,6 +21,7 @@ from litellm.integrations.custom_guardrail import CustomGuardrail  # noqa: E402
 from litellm.proxy.types_utils.utils import get_instance_fn  # noqa: E402
 
 from leakguard.infrastructure.litellm.guardrail import LeakGuardGuardrail  # noqa: E402
+from leakguard.infrastructure.litellm.mock_llm_provider import MockLLMProvider  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 LITELLM_CONFIG = PROJECT_ROOT / "config" / "litellm.yaml"
@@ -90,3 +91,15 @@ def test_config_runs_the_guardrail_on_every_request_and_keeps_the_key_out():
     assert params["mode"] == "pre_call"
     assert params["default_on"] is True
     assert _load_config()["general_settings"]["master_key"] == "os.environ/LITELLM_MASTER_KEY"
+
+
+# 6
+def test_config_routes_the_mock_model_to_the_leakguard_mock_provider():
+    config = _load_config()
+    handlers = {p["provider"]: p["custom_handler"] for p in config["litellm_settings"]["custom_provider_map"]}
+    handler = get_instance_fn(handlers["leakguard-mock"], config_file_path=str(LITELLM_CONFIG))
+    assert isinstance(handler, MockLLMProvider)
+
+    models = {m["model_name"]: m["litellm_params"] for m in config["model_list"]}
+    assert models["leakguard-mock"]["model"].startswith("leakguard-mock/")
+    assert "mock_response" not in models["leakguard-mock"]

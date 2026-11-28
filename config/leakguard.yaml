@@ -42,3 +42,9 @@ vector_index:
 statistics:
   # Exposure attempts per user per day above which the user is flagged (FR-31).
   attempt_limit: 10             # placeholder
+
+mock_llm:
+  # MockLLMProvider, the test LLM provider behind the leakguard-mock model (config/litellm.yaml).
+  # A path = append one JSON line per request the mock LLM receives (what LiteLLM forwarded
+  # after the hook); null = off. Tests set LEAKGUARD_MOCK_LLM__RECORD_FILE to a temporary file.
+  record_file: null

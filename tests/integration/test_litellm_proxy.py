@@ -1,96 +1,96 @@
-"""End-to-end check: the real LiteLLM proxy starts from config/litellm.yaml with the
-LeakGuard guardrail and approves a request to the mock model (issue #9)."""
+"""End-to-end checks through the real LiteLLM proxy started from config/litellm.yaml, with the
+real LeakGuard hook and the mock LLM recording what it receives (issues #9, #12):
+
+    client (httpx) -> LiteLLM proxy -> LeakGuard hook -> mock LLM -> back to the client
+"""
 
 from __future__ import annotations
-
-import os
-import secrets
-import socket
-import subprocess
-import sys
-import time
-from pathlib import Path
 
 import httpx
 import pytest
 
 pytest.importorskip("litellm")
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-STARTUP_TIMEOUT_S = 90
+from leakguard.infrastructure.litellm.mock_llm_provider import (  # noqa: E402
+    RECEIVED_EVENT,
+    parse_echo,
+    read_events,
+)
+from tests.utils.litellm_proxy import PROJECT_ROOT, start_proxy, stream_content  # noqa: E402
+
+MARKER = "ORION-FICTIONAL-SECRET-7731"  # fictional text whose presence shows a leak
 CHAT_REQUEST = {
     "model": "leakguard-mock",
     "messages": [{"role": "user", "content": "hello LeakGuard"}],
 }
-MOCK_ANSWER = "Mock answer from the LeakGuard test model."
-
-
-def _free_port() -> int:
-    with socket.socket() as sock:
-        sock.bind(("127.0.0.1", 0))
-        return sock.getsockname()[1]
+# The shape of a chat request from Open WebUI (assumed from the OpenAI format, not captured):
+# streaming, a system prompt, multi-turn, content parts and sampling options.
+OPEN_WEBUI_REQUEST = {
+    "model": "leakguard-mock",
+    "stream": True,
+    "stream_options": {"include_usage": True},
+    "temperature": 0.7,
+    "messages": [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": [{"type": "text", "text": "Please summarize the following document."}]},
+        {"role": "assistant", "content": "Sure, please paste it."},
+        {"role": "user", "content": "Quarterly planning notes for the team offsite."},
+    ],
+}
 
 
 @pytest.fixture(scope="module")
 def proxy(tmp_path_factory):
-    """Start the proxy on a free port with a random master key used only by this run."""
-    port = _free_port()
-    master_key = "sk-" + secrets.token_hex(32)
-    log_path = tmp_path_factory.mktemp("litellm") / "proxy.log"
-    # PYTHONUTF8: LiteLLM's start-up banner cannot be written in Windows' default encoding.
-    env = {**os.environ, "LITELLM_MASTER_KEY": master_key, "PYTHONUTF8": "1"}
-    base_url = f"http://127.0.0.1:{port}"
-
-    with log_path.open("w", encoding="utf-8") as log:
-        process = subprocess.Popen(
-            [sys.executable, "-m", "litellm.proxy.proxy_cli",
-             "--config", "config/litellm.yaml", "--host", "127.0.0.1", "--port", str(port)],
-            cwd=PROJECT_ROOT, env=env, stdout=log, stderr=subprocess.STDOUT,
-        )
-        try:
-            deadline = time.monotonic() + STARTUP_TIMEOUT_S
-            while True:
-                if process.poll() is not None:
-                    pytest.fail("LiteLLM proxy exited during start-up:\n"
-                                + log_path.read_text(encoding="utf-8")[-3000:])
-                try:
-                    if httpx.get(f"{base_url}/health/liveliness", timeout=2).status_code == 200:
-                        break
-                except httpx.HTTPError:
-                    pass
-                if time.monotonic() > deadline:
-                    pytest.fail(f"LiteLLM proxy did not start within {STARTUP_TIMEOUT_S} s")
-                time.sleep(1)
-
-            yield base_url, master_key
-        finally:
-            process.terminate()
-            try:
-                process.wait(timeout=15)
-            except subprocess.TimeoutExpired:
-                process.kill()
+    with start_proxy(PROJECT_ROOT / "config" / "litellm.yaml", tmp_path_factory.mktemp("litellm")) as running:
+        yield running
 
 
-def test_request_without_master_key_is_rejected(proxy):
-    base_url, _ = proxy
-    response = httpx.post(f"{base_url}/v1/chat/completions", json=CHAT_REQUEST, timeout=30)
+@pytest.fixture
+def record(proxy):
+    """The mock LLM's record file, emptied before the test."""
+    return proxy.clear_record()
+
+
+def _chat(proxy, body: dict, headers: dict | None = None) -> httpx.Response:
+    return httpx.post(f"{proxy.base_url}/v1/chat/completions", json=body, headers=headers, timeout=30)
+
+
+# 8
+def test_request_without_master_key_never_reaches_the_mock_llm(proxy, record):
+    body = {"model": "leakguard-mock", "messages": [{"role": "user", "content": f"unauthenticated {MARKER}"}]}
+
+    response = _chat(proxy, body)
+
     # LiteLLM 1.108.20 answers 500 here (its auth error handler needs the optional `prisma`
     # package); what matters is that the request is rejected and never reaches the model.
     assert response.status_code >= 400
-    assert MOCK_ANSWER not in response.text
+    assert read_events(record) == []
+    assert MARKER not in response.text
 
 
 def test_leakguard_guardrail_is_registered(proxy):
-    base_url, master_key = proxy
-    response = httpx.get(f"{base_url}/guardrails/list",
-                         headers={"Authorization": f"Bearer {master_key}"}, timeout=30)
+    response = httpx.get(f"{proxy.base_url}/guardrails/list", headers=proxy.auth, timeout=30)
     assert response.status_code == 200
     assert "leakguard" in [g["guardrail_name"] for g in response.json()["guardrails"]]
 
 
-def test_request_with_master_key_is_approved(proxy):
-    base_url, master_key = proxy
-    response = httpx.post(f"{base_url}/v1/chat/completions", json=CHAT_REQUEST,
-                          headers={"Authorization": f"Bearer {master_key}"}, timeout=30)
+# 7
+def test_approved_request_reaches_the_mock_llm_unchanged(proxy, record):
+    response = _chat(proxy, CHAT_REQUEST, proxy.auth)
+
     assert response.status_code == 200
-    assert response.json()["choices"][0]["message"]["content"] == MOCK_ANSWER
+    assert parse_echo(response.json()["choices"][0]["message"]["content"]) == CHAT_REQUEST["messages"]
+    assert read_events(record) == [
+        {"event": RECEIVED_EVENT, "model": "echo", "messages": CHAT_REQUEST["messages"]}
+    ]
+
+
+# 9
+def test_open_webui_style_streaming_request_reaches_the_mock_llm_unchanged(proxy, record):
+    response = _chat(proxy, OPEN_WEBUI_REQUEST, proxy.auth)
+
+    assert response.status_code == 200
+    assert parse_echo(stream_content(response)) == OPEN_WEBUI_REQUEST["messages"]
+    events = read_events(record)
+    assert [event["event"] for event in events] == [RECEIVED_EVENT]
+    assert events[0]["messages"] == OPEN_WEBUI_REQUEST["messages"]

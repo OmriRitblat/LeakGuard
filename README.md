@@ -35,13 +35,17 @@ src/leakguard/
   infrastructure/              INFRASTRUCTURE LAYER
     litellm/                   LeakGuardGuardrail (LiteLLM hook), FailurePolicy,
                                InspectionClient, InProcessInspectionClient (POC),
-                               HttpInspectionClient (Alpha)
+                               HttpInspectionClient (Alpha), MockLLMProvider (POC test provider)
     persistence/               BaseRepositoryImpl[T] + 4 repository implementations
     security/                  CryptoService, Argon2PasswordHasher, JwtTokenIssuer
     vector/                    PgVectorIndex
     models/                    SentenceTransformerBiEncoder, HfCrossEncoderModel, HfLocalLlm
-config/leakguard.yaml          all tuning values (inspection, failure policy, models, vector index, statistics)
+config/leakguard.yaml          all tuning values (inspection, failure policy, models, vector index, statistics, mock LLM);
+                               tests use it too and override single values through LEAKGUARD_* variables
+config/litellm.yaml            LiteLLM Proxy: the leakguard guardrail and the leakguard-mock model
 tests/                         pytest tests (test_ci.py is a placeholder)
+  utils/                       LiteLLM proxy helper (litellm_proxy.py), hook test doubles (litellm_doubles.py)
+    litellm_test.yaml          test-only LiteLLM config: the mock LLM with the hook test doubles
 .github/workflows/ci.yml       GitHub Actions: runs pytest on Python 3.11 on every push to main and every PR
 ```
 
@@ -81,6 +85,9 @@ The pipeline, stages and repositories are synchronous.
   `EmbeddingMatchStage.max_matches_per_candidate`, `model_name` and `device` on the three
   model adapters.
 - `UserRepository.find_by_email` returns `User | None`.
+- `MockLLMProvider` (`infrastructure/litellm`) and the `mock_llm` settings section: POC test
+  infrastructure that is not in the diagram. It stands in for the external LLM provider behind
+  the `leakguard-mock` model (issue #12).
 
 ## Configuration
 
@@ -102,6 +109,7 @@ settings.failure_policy.timeout_ms   # 7000
 | `models` | `bi_encoder`, `cross_encoder`, `local_llm` (`null` = disabled), each with `name` and `device` (`cpu`, `cuda` or `cuda:<n>`) | the three model adapters |
 | `vector_index` | `max_results` | PgVectorIndex |
 | `statistics` | `attempt_limit` | StatisticsService |
+| `mock_llm` | `record_file` (`null` = off; a path = one JSON line per request the mock LLM receives) | MockLLMProvider |
 
 No secrets are stored in the YAML configuration. Database credentials, the encryption key and the LiteLLM master key are configured through environment variables. JWT and service-token configuration will be added in later development stages.
 
@@ -222,7 +230,9 @@ Integration with the application startup and persistence repositories will be co
 
 LiteLLM is pinned exactly to `litellm[proxy]==1.108.20` (LTS) in `pyproject.toml`; releases
 1.82.7, 1.82.8 and 1.107.0 were compromised on PyPI. `config/litellm.yaml` registers the
-`leakguard` pre-call guardrail on every request and a mock model, `leakguard-mock`.
+`leakguard` pre-call guardrail on every request and a mock model, `leakguard-mock`, served by
+`MockLLMProvider` (registered under `litellm_settings.custom_provider_map`). The mock calls no
+real provider, so no API key is needed.
 
 From the project root, after creating `.env`:
 
@@ -232,6 +242,22 @@ litellm --config config/litellm.yaml            # http://localhost:4000
 ```
 
 Requests must send `Authorization: Bearer <LITELLM_MASTER_KEY>`.
+
+### Seeing what reaches the LLM
+
+The mock LLM answers with the messages it received after the hook, as JSON
+(`{"received_messages": [...]}`), for normal and streaming (`"stream": true`) requests:
+
+```bash
+curl http://localhost:4000/v1/chat/completions \
+  -H "Authorization: Bearer <LITELLM_MASTER_KEY>" -H "Content-Type: application/json" \
+  -d '{"model": "leakguard-mock", "messages": [{"role": "user", "content": "hello"}]}'
+```
+
+To also record every request the mock LLM receives, set `mock_llm.record_file` in
+`config/leakguard.yaml`, or `LEAKGUARD_MOCK_LLM__RECORD_FILE=<path>`, before starting the
+proxy. Each request becomes one JSON line. A request the hook rejects never reaches the mock,
+so it is never recorded.
 
 
 ## Testing

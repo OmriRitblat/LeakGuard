@@ -13,6 +13,7 @@ missing or misspelled key stops start-up with a clear error.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -83,6 +84,14 @@ class StatisticsSettings(_Section):
     attempt_limit: int = Field(gt=0, description="exposure attempts per user per day above which a user is flagged (FR-31)")
 
 
+class MockLlmSettings(_Section):
+    """MockLLMProvider, the POC test provider behind the leakguard-mock model (config/litellm.yaml)."""
+
+    record_file: Path | None = Field(
+        description="JSON Lines file the mock LLM appends every received request to; None = off"
+    )
+
+
 class Settings(BaseSettings):
     """All LeakGuard settings. Build it with load_settings()."""
 
@@ -98,6 +107,7 @@ class Settings(BaseSettings):
     models: ModelsSettings
     vector_index: VectorIndexSettings
     statistics: StatisticsSettings
+    mock_llm: MockLlmSettings
 
     @model_validator(mode="after")
     def _service_answers_before_hook_gives_up(self) -> Settings:

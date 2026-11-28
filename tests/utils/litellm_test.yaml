@@ -1,0 +1,35 @@
+# LiteLLM configuration used only by tests/integration/test_mock_llm_flow.py (issue #12).
+#
+# The same mock LLM as config/litellm.yaml, but the LeakGuard hook is replaced by test doubles
+# (tests/utils/litellm_doubles.py). None runs by default; each request chooses one with
+# "guardrails": ["<guardrail_name>"]. Never used outside the tests.
+
+model_list:
+  - model_name: leakguard-mock
+    litellm_params:
+      model: leakguard-mock/echo
+
+litellm_settings:
+  custom_provider_map:
+    - provider: leakguard-mock
+      custom_handler: leakguard.infrastructure.litellm.mock_llm_provider.mock_llm_provider
+
+guardrails:
+  - guardrail_name: spy
+    litellm_params:
+      guardrail: tests.utils.litellm_doubles.SpyGuardrail
+      mode: pre_call
+      default_on: false
+  - guardrail_name: reject
+    litellm_params:
+      guardrail: tests.utils.litellm_doubles.RejectingGuardrail
+      mode: pre_call
+      default_on: false
+  - guardrail_name: replace
+    litellm_params:
+      guardrail: tests.utils.litellm_doubles.ReplacingGuardrail
+      mode: pre_call
+      default_on: false
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

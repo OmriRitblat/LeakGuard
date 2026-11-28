@@ -17,11 +17,23 @@ if TYPE_CHECKING:
 class LeakGuardGuardrail(CustomGuardrail):
     """The LiteLLM pre-call hook.
 
-    Builds an InspectionRequest from the LiteLLM request, calls the InspectionClient
-    under its FailurePolicy, and applies the result.
+    Target design: builds an InspectionRequest from the LiteLLM request, calls the
+    InspectionClient under its FailurePolicy, and applies the result.
+
+    Current state (POC Stage 1, issue #9): the hook approves every request
+    unchanged. The inspection pipeline is connected in a later issue.
+
+    LiteLLM creates the hook itself from config/litellm.yaml, as
+    ``LeakGuardGuardrail(guardrail_name=..., event_hook=..., default_on=..., **other_params)``,
+    so ``client`` and ``failure_policy`` are optional until the start-up wiring exists.
     """
 
-    def __init__(self, client: InspectionClient, failure_policy: FailurePolicy, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        client: InspectionClient | None = None,
+        failure_policy: FailurePolicy | None = None,
+        **kwargs: Any,
+    ) -> None:
         """``kwargs`` are LiteLLM's guardrail settings (guardrail_name, event_hook, default_on, ...)."""
         super().__init__(**kwargs)
         self._client = client
@@ -36,9 +48,12 @@ class LeakGuardGuardrail(CustomGuardrail):
     ) -> Exception | str | dict | None:
         """Inspect the request before LiteLLM forwards it to the provider.
 
+        Current behavior: approves every request and returns ``data`` unchanged.
+
+        Target postconditions (once the pipeline is connected):
         Post Blocked:  decision = BLOCK implies the request is rejected and never forwarded (FR-10).
         Post Redacted: decision = REDACT implies the messages in ``data`` are replaced by
                        result.approved_texts (FR-11); the returned dict is the modified ``data``.
         Post when the inspection did not complete, the user gets the FailurePolicy notice.
         """
-        raise NotImplementedError
+        return data

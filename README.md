@@ -71,6 +71,9 @@ The pipeline, stages and repositories are synchronous.
 - `SecretService._generate_examples(secret_id)` (background example generation, FR-16).
 - `LeakGuardGuardrail` extends LiteLLM's `CustomGuardrail` and uses the real
   `async_pre_call_hook(user_api_key_dict, cache, data, call_type)` signature.
+- `LeakGuardGuardrail.__init__(client=None, failure_policy=None, **kwargs)`: LiteLLM creates
+  the hook from `config/litellm.yaml`, so `client` and `failure_policy` are optional until the
+  start-up wiring exists. Until then the hook approves every request unchanged.
 - New types for untyped parameters and results: `SecretDraft`/`ExampleDraft`, `Period`,
   `StatsFilter`, `InspectionStats`, `AttempterStats`, `PiiRule`/`PiiType`, domain errors.
 - Constructor settings the diagram leaves out: `StatisticsService.attempt_limit`,
@@ -100,7 +103,7 @@ settings.failure_policy.timeout_ms   # 7000
 | `vector_index` | `max_results` | PgVectorIndex |
 | `statistics` | `attempt_limit` | StatisticsService |
 
-No secrets are stored in the YAML configuration. Database credentials and the encryption key are configured through environment variables. JWT and service-token configuration will be added in later development stages.
+No secrets are stored in the YAML configuration. Database credentials, the encryption key and the LiteLLM master key are configured through environment variables. JWT and service-token configuration will be added in later development stages.
 
 ### Two timers
 
@@ -215,6 +218,22 @@ Integration with the application startup and persistence repositories will be co
 - Do not store real organizational secrets during the POC.
 
 
+## LiteLLM Proxy (development)
+
+LiteLLM is pinned exactly to `litellm[proxy]==1.108.20` (LTS) in `pyproject.toml`; releases
+1.82.7, 1.82.8 and 1.107.0 were compromised on PyPI. `config/litellm.yaml` registers the
+`leakguard` pre-call guardrail on every request and a mock model, `leakguard-mock`.
+
+From the project root, after creating `.env`:
+
+```bash
+python scripts/generate_litellm_master_key.py   # writes LITELLM_MASTER_KEY to .env
+litellm --config config/litellm.yaml            # http://localhost:4000
+```
+
+Requests must send `Authorization: Bearer <LITELLM_MASTER_KEY>`.
+
+
 ## Testing
 
 LeakGuard provides shared pytest fixtures for isolated PostgreSQL testing, encryption, and synthetic POC dataset access.
@@ -226,8 +245,8 @@ For setup instructions, local test execution, fixture usage, and CI integration,
 ## Development
 
 ```bash
-pip install -e ".[dev]"            # core + pytest (what CI installs)
-pip install -e ".[dev,litellm]"    # + LiteLLM, for the guardrail hook
+pip install -e ".[dev]"            # core + pytest (LiteLLM tests are skipped)
+pip install -e ".[dev,litellm]"    # + LiteLLM Proxy (what the CI test job installs)
 pip install -e ".[dev,all]"        # + sentence-transformers/transformers (pulls in PyTorch)
 pytest
 ```

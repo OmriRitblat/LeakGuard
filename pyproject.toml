@@ -21,7 +21,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-litellm = ["litellm"]          # LeakGuardGuardrail (CustomGuardrail base class)
+# LiteLLM Proxy + LeakGuardGuardrail (CustomGuardrail base class). Exact pin (PC-01, R4):
+# 1.108 is the LTS line; releases 1.82.7, 1.82.8 and 1.107.0 were compromised on PyPI.
+litellm = ["litellm[proxy]==1.108.20"]
 ml = [                         # heavy: pulls in PyTorch
     "sentence-transformers",   # SentenceTransformerBiEncoder, HfCrossEncoderModel
     "transformers",            # HfLocalLlm

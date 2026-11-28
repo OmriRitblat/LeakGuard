@@ -1,0 +1,26 @@
+# LiteLLM Proxy configuration for LeakGuard (LiteLLM 1.108.20, pinned in pyproject.toml).
+#
+# Start from the project root (LiteLLM reads LITELLM_MASTER_KEY from .env there):
+#   litellm --config config/litellm.yaml
+#
+# Every request must send the master key: Authorization: Bearer <LITELLM_MASTER_KEY>
+
+model_list:
+  # Mock model: LiteLLM answers with mock_response and never calls a real provider,
+  # so no provider API key is needed (POC test provider).
+  - model_name: leakguard-mock
+    litellm_params:
+      model: openai/leakguard-mock
+      mock_response: "Mock answer from the LeakGuard test model."
+
+guardrails:
+  # The LeakGuard pre-call hook, run on every request (FR-01).
+  - guardrail_name: leakguard
+    litellm_params:
+      guardrail: leakguard.infrastructure.litellm.guardrail.LeakGuardGuardrail
+      mode: pre_call
+      default_on: true
+
+general_settings:
+  # Never write the key here (the repository is public); it comes from the environment.
+  master_key: os.environ/LITELLM_MASTER_KEY
